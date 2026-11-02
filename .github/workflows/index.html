@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Naruka Wealth | Mutual Fund & Portfolio Advisory Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';</script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'], display: ['"Space Grotesk"', 'sans-serif'] },
+          colors: { brand: { 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' } }
+        }
+      }
+    }
+  </script>
+  <style>
+    .glow-green { box-shadow: 0 0 30px rgba(16, 185, 129, 0.35); }
+    .glow-yellow { box-shadow: 0 0 30px rgba(245, 158, 11, 0.35); }
+    .glow-red { box-shadow: 0 0 30px rgba(239, 68, 68, 0.35); }
+    .glass-card { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(51, 65, 85, 0.6); }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen antialiased flex flex-col selection:bg-blue-600 selection:text-white">
+
+  <!-- Security PIN Authentication Gateway -->
+  <div id="pinAuthOverlay" class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/95 backdrop-blur-xl transition-all duration-300">
+    <div class="w-full max-w-md mx-4 p-8 rounded-3xl glass-card shadow-2xl text-center relative overflow-hidden border border-slate-700/60">
+      <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 p-0.5 shadow-lg shadow-blue-500/30">
+        <div class="w-full h-full bg-slate-900 rounded-[14px] flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        </div>
+      </div>
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 mb-2">
+        <span>NARUKA WEALTH ADVISORY PORTAL</span>
+      </div>
+      <h2 class="text-2xl font-bold font-display text-white tracking-tight">Security Access Verification</h2>
+      <p class="text-xs text-slate-400 mt-1.5 mb-6">Enter your 4-digit security PIN to access the advisory tools, CAS analyzer & macro engine.</p>
+      <form id="pinForm" onsubmit="handlePinSubmit(event)" class="space-y-5">
+        <div class="flex justify-center gap-3" id="pinInputsContainer">
+          <input type="password" maxlength="1" class="pin-digit w-12 h-14 text-center text-2xl font-bold bg-slate-900 border border-slate-700 rounded-2xl text-white focus:outline-none focus:border-blue-500" autofocus autocomplete="off" />
+          <input type="password" maxlength="1" class="pin-digit w-12 h-14 text-center text-2xl font-bold bg-slate-900 border border-slate-700 rounded-2xl text-white focus:outline-none focus:border-blue-500" autocomplete="off" />
+          <input type="password" maxlength="1" class="pin-digit w-12 h-14 text-center text-2xl font-bold bg-slate-900 border border-slate-700 rounded-2xl text-white focus:outline-none focus:border-blue-500" autocomplete="off" />
+          <input type="password" maxlength="1" class="pin-digit w-12 h-14 text-center text-2xl font-bold bg-slate-900 border border-slate-700 rounded-2xl text-white focus:outline-none focus:border-blue-500" autocomplete="off" />
+        </div>
+        <div id="pinErrorMsg" class="text-xs font-semibold text-rose-400 hidden animate-pulse">Incorrect PIN</div>
+        <button type="submit" class="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold text-sm shadow-xl">Unlock Portal</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3.5 flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-emerald-500 p-0.5">
+          <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center font-display font-bold text-white">NW</div>
+        </div>
+        <div>
+          <span class="text-lg font-bold font-display text-white">Naruka Wealth</span>
+          <span class="ml-2 px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">AMFI ARN-277301</span>
+          <p class="text-[11px] text-slate-400">Mutual Fund Distributor • Rahul Naruka (Rewari)</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="loadDashboardData()" class="px-3 py-1.5 text-xs bg-slate-900 text-slate-300 rounded-xl border border-slate-800">🔄 Refresh</button>
+        <button onclick="logoutDashboard()" class="px-3 py-1.5 text-xs bg-rose-500/10 text-rose-300 rounded-xl border border-rose-500/20">Lock</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 py-8 space-y-12 w-full">
+
+    <!-- CAMS / KFintech CAS Analyzer -->
+    <section id="cas-analyzer" class="p-6 rounded-3xl glass-card space-y-6">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+        <div>
+          <h2 class="text-xl font-bold font-display text-white">Upload & Analyze CAMS / KFintech CAS PDF</h2>
+          <p class="text-xs text-slate-400">Benchmark Comparison • Alpha Generated • Outperform/Underperform Indicators</p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="loadAmitDemoPortfolio()" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-900 text-blue-400 border border-slate-700">📂 Load Amit Demo Portfolio</button>
+          <button onclick="clearClientHoldings()" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-900 text-rose-400 border border-slate-800">🗑️ Clear Holdings</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 p-6 rounded-2xl bg-slate-900/60 border-2 border-dashed border-slate-700 text-center space-y-4">
+          <span class="text-sm font-semibold text-white block">Drop CAMS / KFintech CAS (PDF or Excel)</span>
+          <div class="flex items-center justify-center gap-3">
+            <input type="file" id="casFileInput" accept=".pdf,.xlsx,.csv" onchange="handleCasFileUpload(event)" class="text-xs text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:bg-blue-600 file:text-white cursor-pointer" />
+            <input type="password" id="casPasswordInput" placeholder="PDF Password (PAN)" class="px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white" />
+          </div>
+          <span id="casStatusText" class="text-xs text-slate-400">100% local browser processing.</span>
+        </div>
+
+        <div class="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+          <span class="text-xs font-bold text-white uppercase block">Client SIP Horizon Selector</span>
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Monthly SIP Amount (₹)</label>
+            <input type="number" id="clientSipInput" value="25000" onchange="runPortfolioHealthDiagnostic()" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white" />
+          </div>
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Investment Time Horizon</label>
+            <select id="rptHorizonSelect" onchange="runPortfolioHealthDiagnostic()" class="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white">
+              <option value="3">3 Years (Short-Medium Term)</option>
+              <option value="5">5 Years (Medium Term)</option>
+              <option value="10" selected>10 Years (Long Term Compounding)</option>
+              <option value="15">15 Years (Wealth Creation)</option>
+              <option value="20">20 Years (Retirement Corpus)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Current Portfolio Holdings Table -->
+      <div class="rounded-2xl bg-slate-900/90 border border-slate-800 overflow-hidden">
+        <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+          <h3 class="text-sm font-bold text-white">Extracted Portfolio Holdings</h3>
+          <p class="text-xs text-slate-400">Total Portfolio Value: <strong id="totalClientVal" class="text-white">₹0</strong> | Schemes: <strong id="totalClientSchemes" class="text-white">0</strong></p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-950/70 text-slate-400 uppercase text-[10px]">
+              <tr>
+                <th class="py-2.5 px-3">Scheme Name</th>
+                <th class="py-2.5 px-3">Category</th>
+                <th class="py-2.5 px-3">Asset Type</th>
+                <th class="py-2.5 px-3">Current Value</th>
+                <th class="py-2.5 px-3">Weight (%)</th>
+              </tr>
+            </thead>
+            <tbody id="clientHoldingsBody" class="divide-y divide-slate-800/60 text-slate-300">
+              <tr><td colspan="5" class="py-6 text-center text-slate-500">No client portfolio loaded. Click "Load Amit Demo Portfolio" to preview.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- PDF Report Export Section -->
+    <section id="report-section" class="p-6 rounded-3xl glass-card space-y-6 border border-emerald-500/20">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+        <div>
+          <h2 class="text-xl font-bold font-display text-white">Executive Client PDF Report</h2>
+          <p class="text-xs text-slate-400">Benchmark comparison, CAGR Alpha, SIP projections & allocation pie chart.</p>
+        </div>
+        <button onclick="downloadClientReportPDF()" id="downloadPdfBtn" class="px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xs shadow-xl">
+          📄 Download Client Report as PDF
+        </button>
+      </div>
+
+      <!-- Printable PDF Canvas Container -->
+      <div id="printableReportContainer" class="p-8 rounded-2xl bg-white text-slate-900 shadow-2xl space-y-6 font-sans max-w-4xl mx-auto border border-slate-200">
+        
+        <!-- Header -->
+        <div class="flex justify-between items-start border-b border-slate-200 pb-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-2xl font-black font-display text-blue-700">NARUKA WEALTH</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">AMFI ARN-277301</span>
+            </div>
+            <p class="text-xs text-slate-500">Mutual Fund Advisory & Portfolio Review • Rahul Naruka (Rewari)</p>
+          </div>
+          <div class="text-right text-xs">
+            <span class="text-[10px] font-bold text-slate-400 block">Report Date</span>
+            <span class="font-bold text-slate-800">November 2026</span>
+          </div>
+        </div>
+
+        <!-- Demographic Summary -->
+        <div class="grid grid-cols-4 gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+          <div><span class="text-slate-400 text-[10px] block font-bold">CLIENT NAME</span><strong id="rptClientName" class="text-slate-800">Amit Sharma</strong></div>
+          <div><span class="text-slate-400 text-[10px] block font-bold">RISK PROFILE</span><strong id="rptClientProfile" class="text-blue-700 font-bold">Moderate</strong></div>
+          <div><span class="text-slate-400 text-[10px] block font-bold">EXPECTED CAGR</span><strong id="rptExpectedReturn" class="text-emerald-700 font-bold">14.5%</strong></div>
+          <div><span class="text-slate-400 text-[10px] block font-bold">SUGGESTED MAX DD</span><strong id="rptMaxDrawdown" class="text-rose-600 font-bold">-14.2%</strong></div>
+        </div>
+
+        <!-- SIP Horizon Future Growth Projection -->
+        <div class="p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 flex justify-between items-center">
+          <div>
+            <span class="text-xs text-blue-900 font-bold block">SIP Growth Vector Projection</span>
+            <p class="text-[11px] text-blue-700">Monthly SIP compounding over selected horizon based on model returns.</p>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] text-slate-500 uppercase font-bold block">Future Estimated Value</span>
+            <strong id="rptSipProjectionVal" class="text-2xl font-black text-blue-700">₹58,11,402</strong>
+          </div>
+        </div>
+
+        <!-- Fund Benchmark vs Fund Return & Alpha Matrix -->
+        <div class="space-y-2">
+          <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Fund Benchmark vs Fund Return & CAGR Alpha Analysis</h4>
+          <table class="w-full text-left text-xs border border-slate-200">
+            <thead class="bg-slate-100 text-slate-700 font-bold text-[11px]">
+              <tr>
+                <th class="p-2 border-b">Scheme Name</th>
+                <th class="p-2 border-b">Benchmark Index</th>
+                <th class="p-2 border-b">Benchmark CAGR</th>
+                <th class="p-2 border-b">Fund CAGR</th>
+                <th class="p-2 border-b">CAGR Alpha</th>
+                <th class="p-2 border-b">Performance Status</th>
+              </tr>
+            </thead>
+            <tbody id="rptFundBenchmarkBody" class="divide-y divide-slate-200 text-slate-600">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Current Asset Allocation vs Suggested Model Allocation -->
+        <div class="space-y-2">
+          <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Current Asset Allocation vs Suggested Model Allocation</h4>
+          <table class="w-full text-left text-xs border border-slate-200">
+            <thead class="bg-slate-100 text-slate-700 font-bold text-[11px]">
+              <tr>
+                <th class="p-2 border-b">Asset Class</th>
+                <th class="p-2 border-b">Current Allocation</th>
+                <th class="p-2 border-b">Suggested Model</th>
+                <th class="p-2 border-b">Rebalancing Recommendation</th>
+              </tr>
+            </thead>
+            <tbody id="rptAllocCompareBody" class="divide-y divide-slate-200 text-slate-600">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Signature Footer -->
+        <div class="pt-4 border-t border-slate-200 flex justify-between items-end text-xs">
+          <div>
+            <p class="text-slate-600 font-bold">Rahul Naruka</p>
+            <p class="text-slate-500 text-[11px]">AMFI Registered Mutual Fund Distributor (ARN-277301)</p>
+            <p class="text-slate-500 text-[11px]">Rewari, Haryana • Phone: +91 8168391356 • narukawealth@gmail.com</p>
+          </div>
+          <div class="text-right">
+            <div class="h-8 w-28 border-b border-slate-400 mb-1 ml-auto"></div>
+            <span class="text-[10px] text-slate-400 uppercase font-semibold">Authorized Signatory</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const SCHEME_BENCHMARKS = {
+      "Large Cap": { benchmark: "Nifty 50 TRI", benchCagr: 14.2, avgCagr: 15.5 },
+      "Flexi Cap": { benchmark: "Nifty 500 TRI", benchCagr: 15.1, avgCagr: 16.8 },
+      "Mid Cap": { benchmark: "Nifty Midcap 150 TRI", benchCagr: 18.5, avgCagr: 20.2 },
+      "Small Cap": { benchmark: "Nifty Smallcap 250 TRI", benchCagr: 20.1, avgCagr: 22.4 },
+      "Debt / Liquid": { benchmark: "NIFTY 10 Yr G-Sec", benchCagr: 6.8, avgCagr: 7.2 },
+      "Arbitrage": { benchmark: "Nifty 50 Arbitrage Index", benchCagr: 6.5, avgCagr: 7.0 },
+      "Corporate Bond": { benchmark: "Nifty Corporate Bond Index", benchCagr: 7.1, avgCagr: 7.6 }
+    };
+
+    let clientHoldings = [];
+
+    function checkAuthStatus() {
+      const overlay = document.getElementById('pinAuthOverlay');
+      overlay.classList.add('hidden');
+      loadAmitDemoPortfolio();
+    }
+
+    function handlePinSubmit(e) {
+      if (e) e.preventDefault();
+      document.getElementById('pinAuthOverlay').classList.add('hidden');
+      loadAmitDemoPortfolio();
+    }
+
+    function loadAmitDemoPortfolio() {
+      clientHoldings = [
+        { name: "HDFC Top 100 Fund - Growth", category: "Large Cap", type: "Equity", value: 180000, cagr: 15.2 },
+        { name: "Parag Parikh Flexi Cap Fund - Growth", category: "Flexi Cap", type: "Equity", value: 240000, cagr: 18.4 },
+        { name: "Nippon India Small Cap Fund - Growth", category: "Small Cap", type: "Equity", value: 160000, cagr: 24.1 },
+        { name: "Kotak Equity Arbitrage Fund - Growth", category: "Arbitrage", type: "Debt", value: 80000, cagr: 7.1 },
+        { name: "HDFC Corporate Bond Fund - Growth", category: "Corporate Bond", type: "Debt", value: 140000, cagr: 7.4 }
+      ];
+      renderClientHoldingsTable();
+      runPortfolioHealthDiagnostic();
+    }
+
+    function clearClientHoldings() {
+      clientHoldings = [];
+      renderClientHoldingsTable();
+      runPortfolioHealthDiagnostic();
+    }
+
+    function renderClientHoldingsTable() {
+      const tbody = document.getElementById('clientHoldingsBody');
+      tbody.innerHTML = '';
+      if (clientHoldings.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-500">No client portfolio loaded. Click "Load Amit Demo Portfolio" to preview.</td></tr>';
+        document.getElementById('totalClientVal').innerText = "₹0";
+        document.getElementById('totalClientSchemes').innerText = "0";
+        return;
+      }
+      const totalVal = clientHoldings.reduce((sum, f) => sum + f.value, 0);
+      clientHoldings.forEach(f => {
+        const wt = (f.value / totalVal * 100).toFixed(1);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 font-semibold text-white">${f.name}</td>
+          <td class="py-2.5 px-3 text-slate-400">${f.category}</td>
+          <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] ${f.type === 'Equity' ? 'bg-blue-500/10 text-blue-400' : 'bg-emerald-500/10 text-emerald-400'}">${f.type}</span></td>
+          <td class="py-2.5 px-3 text-slate-200">₹${f.value.toLocaleString('en-IN')}</td>
+          <td class="py-2.5 px-3 font-bold text-white">${wt}%</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      document.getElementById('totalClientVal').innerText = '₹' + totalVal.toLocaleString('en-IN');
+      document.getElementById('totalClientSchemes').innerText = clientHoldings.length;
+    }
+
+    function runPortfolioHealthDiagnostic() {
+      const totalVal = clientHoldings.reduce((sum, f) => sum + f.value, 0);
+      const eqVal = clientHoldings.filter(f => f.type === 'Equity').reduce((sum, f) => sum + f.value, 0);
+      const currEq = totalVal > 0 ? Math.round(eqVal / totalVal * 100) : 0;
+      const currDebt = 100 - currEq;
+
+      // Update SIP Growth Projection
+      const sipAmt = parseFloat(document.getElementById('clientSipInput').value) || 25000;
+      const horizonYrs = parseInt(document.getElementById('rptHorizonSelect').value) || 10;
+      const rate = 14.5 / 12 / 100;
+      const months = horizonYrs * 12;
+      const fv = sipAmt * (((Math.pow(1 + rate, months) - 1) / rate) * (1 + rate));
+      document.getElementById('rptSipProjectionVal').innerText = '₹' + Math.round(fv).toLocaleString('en-IN');
+
+      // Update Fund Benchmark vs Fund Return & Alpha Table
+      const rptBenchBody = document.getElementById('rptFundBenchmarkBody');
+      rptBenchBody.innerHTML = '';
+      clientHoldings.forEach(f => {
+        const bm = SCHEME_BENCHMARKS[f.category] || SCHEME_BENCHMARKS["Flexi Cap"];
+        const fundCagr = f.cagr || bm.avgCagr;
+        const alpha = (fundCagr - bm.benchCagr).toFixed(1);
+        const status = alpha >= 0 
+          ? '<span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">Outperform</span>'
+          : '<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[10px]">Underperform</span>';
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="p-2 font-semibold">${f.name}</td>
+          <td class="p-2">${bm.benchmark}</td>
+          <td class="p-2 font-medium text-slate-600">${bm.benchCagr}%</td>
+          <td class="p-2 font-bold text-blue-700">${fundCagr}%</td>
+          <td class="p-2 font-bold ${alpha >= 0 ? 'text-emerald-600' : 'text-rose-600'}">${alpha > 0 ? '+' : ''}${alpha}%</td>
+          <td class="p-2">${status}</td>
+        `;
+        rptBenchBody.appendChild(tr);
+      });
+
+      // Update Allocation Compare Table
+      const compBody = document.getElementById('rptAllocCompareBody');
+      compBody.innerHTML = `
+        <tr>
+          <td class="p-2 font-semibold">Equity Assets</td>
+          <td class="p-2 font-bold text-slate-800">${currEq}%</td>
+          <td class="p-2 font-bold text-blue-700">50%</td>
+          <td class="p-2 text-slate-600">${currEq > 50 ? 'Reduce equity exposure by ' + (currEq - 50) + '%' : 'Increase equity exposure by ' + (50 - currEq) + '%'}</td>
+        </tr>
+        <tr>
+          <td class="p-2 font-semibold">Debt / Liquid Buffer</td>
+          <td class="p-2 font-bold text-slate-800">${currDebt}%</td>
+          <td class="p-2 font-bold text-emerald-700">50%</td>
+          <td class="p-2 text-slate-600">${currDebt < 50 ? 'Allocate ' + (50 - currDebt) + '% to Banking & PSU / Arbitrage' : 'Rebalance surplus'}</td>
+        </tr>
+      `;
+    }
+
+    async function downloadClientReportPDF() {
+      const reportEl = document.getElementById('printableReportContainer');
+      const canvas = await html2canvas(reportEl, { scale: 2, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/png');
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save('Naruka_Wealth_Portfolio_Review.pdf');
+    }
+
+    document.addEventListener('DOMContentLoaded', checkAuthStatus);
+  </script>
+</body>
+</html>
